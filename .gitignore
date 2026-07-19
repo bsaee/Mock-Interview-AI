@@ -1,0 +1,13 @@
+# Virtual Environment
+.venv/
+__pycache__/
+*.pyc
+
+# Local Credentials and Keys
+.env
+
+# Binary Caches & Uploaded Resumes (Keeps git history lightweight)
+static/cache/*
+!static/cache/.gitkeep
+data/*
+!data/.gitkeep
