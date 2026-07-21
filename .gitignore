@@ -5,6 +5,7 @@ __pycache__/
 
 # Local Credentials and Keys
 .env
+.streamlit/secrets.toml
 
 # Binary Caches & Uploaded Resumes (Keeps git history lightweight)
 static/cache/*

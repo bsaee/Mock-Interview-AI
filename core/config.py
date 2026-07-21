@@ -19,9 +19,10 @@ class EngineConfiguration:
     def get_llm_client(self) -> ChatGoogleGenerativeAI:
         """Initializes the central text reasoning intelligence engine via Google Gemini."""
         return ChatGoogleGenerativeAI(
-            model="gemini-3.5-flash", 
+            model="gemini-flash-latest", 
             google_api_key=self.google_key,
-            temperature=0.3
+            temperature=0.3,
+            max_retries=3
         )
 
     def get_transcription_client(self) -> ChatGroq:
