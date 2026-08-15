@@ -2,6 +2,7 @@ import os
 import requests
 import streamlit as st
 from pipeline.reporter import ReportGenerator
+from parser.document import ResumeParsingEngine
 
 # --- Application Configuration ---
 st.set_page_config(
@@ -121,11 +122,35 @@ if st.session_state.step == "UPLOAD":
                 "Target Role Title:",
                 placeholder="e.g., Junior Python Developer, Associate Frontend Engineer"
             )
-            jd_val = st.text_area(
-                "Job Description Requirements:",
-                placeholder="Paste key responsibilities or tech stack requirements...",
-                height=120
+            
+            jd_input_mode = st.radio(
+                "How would you like to provide the Job Description?",
+                options=["Upload JD Document (.pdf or .docx)", "Paste JD as Text"],
+                horizontal=True
             )
+            
+            if jd_input_mode == "Upload JD Document (.pdf or .docx)":
+                uploaded_jd_file = st.file_uploader(
+                    "Upload Job Description (.pdf or .docx)",
+                    type=["pdf", "docx"],
+                    key="jd_file_uploader"
+                )
+                if uploaded_jd_file is not None:
+                    try:
+                        jd_bytes = uploaded_jd_file.read()
+                        extracted_jd_text, _ = ResumeParsingEngine.process_file_stream(
+                            uploaded_jd_file.name, jd_bytes, sanitize=False
+                        )
+                        jd_val = extracted_jd_text
+                        st.success(f"✅ Loaded JD from `{uploaded_jd_file.name}`")
+                    except Exception as err:
+                        st.error(f"Failed to parse JD file: {str(err)}")
+            else:
+                jd_val = st.text_area(
+                    "Job Description Requirements:",
+                    placeholder="Paste key responsibilities or tech stack requirements...",
+                    height=120
+                )
 
     with col2:
         selected_round = st.radio(
