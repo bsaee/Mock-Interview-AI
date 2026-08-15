@@ -1,15 +1,68 @@
 import io
+import re
+from typing import Tuple, Dict
 from pypdf import PdfReader
 from docx import Document
 
+class PIISanitizer:
+    """Detects and redacts sensitive Personally Identifiable Information (PII) from raw text."""
+
+    EMAIL_PATTERN = re.compile(
+        r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,7}\b'
+    )
+    PHONE_PATTERN = re.compile(
+        r'(\+?\d{1,3}[-.\s]?)?(\(?\d{2,4}\)?[-.\s]?)?\d{3,5}[-.\s]?\d{3,5}\b'
+    )
+    URL_PATTERN = re.compile(
+        r'https?://(?:www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+        r'|www\.[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b(?:[-a-zA-Z0-9()@:%_\+.~#?&//=]*)'
+        r'|(?:linkedin\.com|github\.com)/[-a-zA-Z0-9_./]+'
+    )
+    POSTAL_CODE_PATTERN = re.compile(
+        r'\b\d{5}(?:[-\s]\d{4})?\b|\b\d{6}\b'
+    )
+
+    @classmethod
+    def sanitize(cls, raw_text: str) -> Tuple[str, Dict[str, int]]:
+        """
+        Scrubs emails, phone numbers, URLs, and postal codes.
+        Returns the sanitized text string along with a redaction audit counter.
+        """
+        audit_counts = {
+            "emails_redacted": 0,
+            "phones_redacted": 0,
+            "urls_redacted": 0,
+            "locations_redacted": 0
+        }
+
+        # 1. Redact URLs and Profiles
+        raw_text, count = cls.URL_PATTERN.subn("[REDACTED_URL]", raw_text)
+        audit_counts["urls_redacted"] = count
+
+        # 2. Redact Emails
+        raw_text, count = cls.EMAIL_PATTERN.subn("[REDACTED_EMAIL]", raw_text)
+        audit_counts["emails_redacted"] = count
+
+        # 3. Redact Phone Numbers
+        raw_text, count = cls.PHONE_PATTERN.subn("[REDACTED_PHONE]", raw_text)
+        audit_counts["phones_redacted"] = count
+
+        # 4. Redact Zip/Postal Codes
+        raw_text, count = cls.POSTAL_CODE_PATTERN.subn("[REDACTED_LOCATION]", raw_text)
+        audit_counts["locations_redacted"] = count
+
+        # Normalize whitespace after redaction
+        clean_text = " ".join(raw_text.split())
+        return clean_text, audit_counts
+
+
 class ResumeParsingEngine:
-    """Provides structural extractors for handling text conversion from binary document spaces."""
+    """Provides structural extractors for converting binary document streams to sanitized text."""
     
     @staticmethod
     def extract_text_from_pdf(file_bytes: bytes) -> str:
-        """Parses a binary PDF byte stream into clean, sequential text lines."""
+        """Parses a binary PDF byte stream into raw text lines."""
         text_accumulator = []
-        # Wrap raw bytes into an in-memory binary stream layer
         binary_stream = io.BytesIO(file_bytes)
         pdf_reader = PdfReader(binary_stream)
         
@@ -18,63 +71,49 @@ class ResumeParsingEngine:
             if page_text:
                 text_accumulator.append(page_text)
                 
-        # Join pages and strip redundant vertical whitespaces
-        combined_text = "\n".join(text_accumulator)
-        return " ".join(combined_text.split())
+        return " ".join("\n".join(text_accumulator).split())
 
     @staticmethod
     def extract_text_from_docx(file_bytes: bytes) -> str:
-        """Parses a binary Word Document byte array into compressed text structures."""
+        """Parses a binary Word Document byte array into raw text."""
         binary_stream = io.BytesIO(file_bytes)
         document_object = Document(binary_stream)
         
-        # Read text cleanly across all internal structural paragraph nodes
         paragraph_texts = [para.text for para in document_object.paragraphs if para.text.strip()]
-        
-        # Compress space arrays
-        combined_text = "\n".join(paragraph_texts)
-        return " ".join(combined_text.split())
+        return " ".join("\n".join(paragraph_texts).split())
 
     @classmethod
-    def process_file_stream(cls, file_name: str, file_bytes: bytes) -> str:
-        """Orchestrates file translation by evaluating incoming extensions natively."""
+    def process_file_stream(cls, file_name: str, file_bytes: bytes, sanitize: bool = True) -> Tuple[str, Dict[str, int]]:
+        """
+        Orchestrates file extraction and executes automatic PII sanitization.
+        Returns: (sanitized_text, redaction_metrics)
+        """
         lower_name = file_name.lower()
         
         if lower_name.endswith('.pdf'):
-            return cls.extract_text_from_pdf(file_bytes)
+            extracted_text = cls.extract_text_from_pdf(file_bytes)
         elif lower_name.endswith('.docx'):
-            return cls.extract_text_from_docx(file_bytes)
+            extracted_text = cls.extract_text_from_docx(file_bytes)
         else:
-            raise ValueError("❌ Unsupported File Type Error: The system only accepts valid '.pdf' or '.docx' formats.")
+            raise ValueError("❌ Unsupported File Type: Only '.pdf' and '.docx' are accepted.")
 
-def run_local_parser_test():
-    """Diagnostic check to verify that file stream readers compile data cleanly without exceptions."""
-    print("\n📄 Initiating Document Parser Module Diagnostics...")
-    print("-------------------------------------------------------")
-    
-    # 1. Create a simulated structural plain text payload
-    mock_resume_content = (
-        "Candidate: Alex Dev\n"
-        "Skills: Python, FastAPI, PostgreSQL, Docker, Core OS, DBMS\n"
-        "Project: Built a telemetry system using optimized SQL indexing frameworks."
-    )
-    
-    try:
-        # 2. Simulate compiling the text string into an in-memory mock DOCX array structure
-        doc = Document()
-        for line in mock_resume_content.split('\n'):
-            doc.add_paragraph(line)
-            
-        mock_docx_bytes = io.BytesIO()
-        doc.save(mock_docx_bytes)
-        mock_docx_bytes.seek(0)
+        if sanitize:
+            return PIISanitizer.sanitize(extracted_text)
         
-        # 3. Stream the byte buffer array back through our processor engine
-        extracted_text = ResumeParsingEngine.process_file_stream("mock_resume.docx", mock_docx_bytes.read())
-        print(f"✅ Parser Module Passed! Output String Array:\n   ↳ {extracted_text}\n")
-        
-    except Exception as error:
-        print(f"❌ Document Parsing Test Failed: {str(error)}\n")
+        return extracted_text, {}
+
 
 if __name__ == "__main__":
-    run_local_parser_test()
+    print("\n🔒 Testing PII Sanitizer & Document Parser Module...")
+    print("-------------------------------------------------------")
+    
+    sample_resume = (
+        "John Doe | Email: john.doe@techcorp.io | Phone: +1 (555) 234-5678\n"
+        "Location: San Francisco, CA 94105 | LinkedIn: linkedin.com/in/johndoe | GitHub: github.com/johndoe\n"
+        "Experience: Built high-throughput API endpoints using FastAPI and PostgreSQL."
+    )
+    
+    clean_text, audit = PIISanitizer.sanitize(sample_resume)
+    print("Sanitized Output:\n↳", clean_text)
+    print("\nRedaction Audit Log:\n↳", audit)
+    print("\n✅ PII Redaction Layer Operational!\n")
