@@ -1,54 +1,67 @@
 from langchain_core.prompts import ChatPromptTemplate
 
 class MockInterviewPrompts:
-    """Isolates the system-level engineering prompt configurations from core execution files."""
+    """Manages prompt blueprints for question generation and post-interview evaluation."""
 
     @staticmethod
     def get_technical_generation_template() -> ChatPromptTemplate:
-        """System prompt blueprint for technical evaluation extraction based on resume context."""
+        """Prompt template for technical questions calibrated for junior/fresher engineering roles."""
         return ChatPromptTemplate.from_messages([
             ("system", (
-                "You are an elite Senior Software Engineer and Systems Architect at a top product firm.\n"
-                "Your objective is to generate exactly 4 deep, conceptual technical interview questions tailored "
-                "specifically to the candidate's resume content. Do NOT ask them to write code.\n\n"
-                "Focus your 4 questions strictly on these architectural nodes:\n"
-                "1. Project Architecture Deep-Dive: Pick a project from their resume and challenge the implementation choices, database selection (SQL vs NoSQL), or trade-offs.\n"
-                "2. CS Fundamentals: Formulate a question targeting DBMS optimization, operating systems mechanics, or computer networking protocols mentioned or implied.\n"
-                "3. Language Mechanics: Target the specific core programming language they claim expertise in (e.g., if Python: ask about GIL, memory management, decorators, or generator performance loops).\n"
-                "4. System Scalability: Ask how one of their project designs would behave under an increased load scale factor.\n\n"
-                "Candidate Resume Ingest Matrix:\n{resume_text}"
+                "You are an empathetic yet thorough Senior Software Engineer conducting a technical interview for an ENTRY-LEVEL / JUNIOR / FRESHER Software Engineer role.\n\n"
+                "Target Role / Focus Area: {target_role}\n"
+                "Optional Job Description Context: {job_description}\n"
+                "Desired Number of Questions: Exactly {num_questions}\n\n"
+                "Calibration Guidelines (Fresher/Junior Level):\n"
+                "- Focus on core language fundamentals (e.g., memory, data types, scoping, OOP vs functional patterns).\n"
+                "- Ask about projects listed on the resume: Why did they choose specific libraries/tools? How did they structure their code? What bugs or roadblocks did they resolve?\n"
+                "- Explore CS basics: basic SQL queries vs indexing, REST API principles, Git workflows, or basic data structures.\n"
+                "- Do NOT ask for complex distributed systems architectures, massive multi-region scaling, or senior system design.\n"
+                "- If a Job Description is provided, align questions with the intersection of the resume and the JD requirements.\n\n"
+                "Sanitized Resume Data:\n{resume_text}"
             )),
-            ("human", "Generate the structured question profile following the exact JSON mapping boundaries.")
+            ("human", "Generate exactly {num_questions} structured junior-level technical interview questions matching the schema.")
         ])
 
     @staticmethod
     def get_behavioral_generation_template() -> ChatPromptTemplate:
-        """System prompt blueprint for tracking behavioral STAR evaluations."""
+        """Prompt template for behavioral questions calibrated for junior/entry-level candidates."""
         return ChatPromptTemplate.from_messages([
             ("system", (
-                "You are a Principal Engineering Manager leading a high-performance system engineering team.\n"
-                "Your task is to generate exactly 4 behavioral interview questions engineered to assess cultural fit, "
-                "leadership potential, team conflict handling, and project ownership metrics.\n\n"
-                "The questions must prompt the candidate to elaborate on real situations, allowing the system to "
-                "subsequently verify their responses against the strict structural limits of the STAR Framework "
-                "(Situation, Task, Action, Result).\n\n"
-                "Candidate Resume Ingest Matrix:\n{resume_text}"
+                "You are an Engineering Hiring Manager conducting a behavioral interview for an ENTRY-LEVEL / JUNIOR candidate.\n\n"
+                "Target Role / Focus Area: {target_role}\n"
+                "Desired Number of Questions: Exactly {num_questions}\n\n"
+                "Calibration Guidelines:\n"
+                "- Frame questions that allow the candidate to use the STAR method (Situation, Task, Action, Result).\n"
+                "- Tailor questions to early-career experiences: academic projects, team collaborations, handling tight deadlines, learning new technologies rapidly, or resolving team disagreements.\n"
+                "- Keep the tone welcoming, professional, and clear.\n\n"
+                "Sanitized Resume Data:\n{resume_text}"
             )),
-            ("human", "Generate the structured behavioral question profile following the exact JSON mapping boundaries.")
+            ("human", "Generate exactly {num_questions} structured behavioral interview questions matching the schema.")
         ])
 
     @staticmethod
-    def get_evaluation_template() -> ChatPromptTemplate:
-        """System prompt blueprint executing the diagnostic audit on candidate responses."""
+    def get_evaluation_template(include_ats: bool = False) -> ChatPromptTemplate:
+        """Prompt template for evaluating the completed interview and optionally running ATS analysis."""
+        ats_instructions = (
+            "\nATS Alignment Task:\n"
+            "Analyze the candidate's resume against the Target Role and Job Description provided below. "
+            "Calculate an estimated match percentage (0-100), identify matched skills, missing essential skills, "
+            "and provide actionable resume improvement tips.\n"
+            "Target Role: {target_role}\n"
+            "Job Description: {job_description}\n"
+            "Candidate Resume: {resume_text}\n"
+        ) if include_ats else "\nATS Alignment Task: Not requested. Leave ats_alignment field null.\n"
+
         return ChatPromptTemplate.from_messages([
             ("system", (
-                "You are the Head of the Engineering Assessment Panel.\n"
-                "You are auditing a candidate's complete multi-turn mock interview log. Analyze the transcript "
-                "rationally, separating engineering substance from surface-level communication polish.\n\n"
-                "Evaluation Guidelines:\n"
-                "- If the round was Technical: Rate their structural correctness, understanding of language internal mechanics, and depth of design trade-offs.\n"
-                "- If the round was Behavioral: Explicitly grade whether they hit the requirements of the STAR framework (Did they provide a context? Did they outline their *individual* technical contribution? Did they provide a quantified result metric?).\n\n"
-                "Interview Session Transcript Log:\n{interview_transcript}"
+                "You are the Lead Interview Assessment Evaluator auditing an entry-level candidate's mock interview performance.\n\n"
+                "Evaluation Guidelines for Junior/Fresher Candidates:\n"
+                "- Assess foundational technical understanding, clarity of thought, and honesty about what they know vs don't know.\n"
+                "- For Behavioral answers, check if they articulated their personal contribution (the 'Action' in STAR) rather than speaking only in vague generalities.\n"
+                "- Provide constructive, encouraging, and highly specific feedback with concrete examples of how to improve.\n"
+                + ats_instructions +
+                "\nInterview Session Transcript:\n{interview_transcript}"
             )),
-            ("human", "Compile the final diagnostic report following the strict, type-safe JSON schema structure.")
+            ("human", "Compile the comprehensive diagnostic assessment report following the schema.")
         ])
