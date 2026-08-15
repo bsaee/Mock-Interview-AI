@@ -2,6 +2,7 @@ import os
 import tempfile
 import streamlit as st
 from dotenv import load_dotenv
+from pipeline.reporter import ReportGenerator
 
 # Load environment variables from .env file
 load_dotenv()
@@ -323,7 +324,43 @@ elif st.session_state.step == "DIAGNOSTICS":
             with st.expander("🔒 Data Privacy & PII Redaction Audit"):
                 st.write("The following sensitive items were redacted prior to AI processing:")
                 st.json(st.session_state.redaction_metrics)
-            
+
+        # --- Downloadable Reports Section ---
+        st.markdown("---")
+        st.subheader("📥 Export & Download Diagnostic Report")
+        
+        md_content = ReportGenerator.generate_markdown_report(
+            report_data=report,
+            transcript=st.session_state.transcript,
+            round_type=st.session_state.round_type,
+            target_role=st.session_state.target_role
+        )
+        
+        pdf_bytes = ReportGenerator.generate_pdf_report(
+            report_data=report,
+            transcript=st.session_state.transcript,
+            round_type=st.session_state.round_type,
+            target_role=st.session_state.target_role
+        )
+        
+        dl_col1, dl_col2 = st.columns(2)
+        with dl_col1:
+            st.download_button(
+                label="📄 Download Report as Markdown (.md)",
+                data=md_content,
+                file_name="interview_diagnostic_report.md",
+                mime="text/markdown",
+                use_container_width=True
+            )
+        with dl_col2:
+            st.download_button(
+                label="📑 Download Full PDF Audit Card (.pdf)",
+                data=pdf_bytes,
+                file_name="interview_diagnostic_report.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+
         st.markdown("---")
         if st.button("🔄 Start New Interview Session", type="secondary"):
             st.session_state.step = "UPLOAD"

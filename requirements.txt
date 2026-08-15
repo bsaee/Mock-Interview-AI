@@ -10,6 +10,7 @@ langchain-groq>=0.1.0
 python-multipart==0.0.9
 edge-tts==6.1.9
 streamlit
+reportlab>=4.0.0
 
 # streamlit>=1.32.0
 # pydantic>=2.7.4
