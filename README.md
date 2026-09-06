@@ -8,7 +8,8 @@ An end-to-end, decoupled AI-driven mock interview and technical assessment platf
 
 The project follows a decoupled client-server architecture: a **FastAPI** backend service handles compute-heavy tasks, PII masking, and multi-cloud model orchestration, while an intuitive **Streamlit** frontend manages user interactions and session states.
 
-\[ Candidate / Browser ]
+```text
+[ Candidate / Browser ]
          │
          ▼
 [ Streamlit Client (app.py) ]  ──(HTTP / REST)──►  [ FastAPI Gateway (main.py) ]
@@ -24,7 +25,7 @@ The project follows a decoupled client-server architecture: a **FastAPI** backen
                                                 • Pydantic Schemas
                                                 • ATS Match & Scorecard
                                                 • PDF/Markdown Reporter
-\
+```
 ---
 
 ## ⚡ Key Features
@@ -41,7 +42,7 @@ The project follows a decoupled client-server architecture: a **FastAPI** backen
 
 ## 📂 Project Directory Structure
 
-\\	ext
+```text
 ├── core/
 │   ├── __init__.py
 │   └── config.py              # Environment configuration & LLM client factories
@@ -59,7 +60,7 @@ The project follows a decoupled client-server architecture: a **FastAPI** backen
 ├── requirements.txt           # Python dependency manifest
 ├── .env.example               # Template for required environment variables
 └── README.md
-\
+```
 ---
 
 ## 🛠️ Tech Stack
@@ -80,7 +81,7 @@ The project follows a decoupled client-server architecture: a **FastAPI** backen
 * Groq Cloud API Key (\GROQ_API_KEY\)
 
 ### 2. Clone & Setup Environment
-\\ash
+```bash
 git clone https://github.com/your-username/mock-interview-ai.git
 cd mock-interview-ai
 
@@ -91,25 +92,31 @@ python -m venv .venv
 source .venv/bin/activate
 
 pip install -r requirements.txt
-\
+```
 ### 3. Configure Environment Variables
-Create a \.env\ file in the root directory:
-\\env
+Create a .env file in the root directory:
+```env
 GOOGLE_API_KEY=your_google_gemini_api_key
 GROQ_API_KEY=your_groq_api_key
 BACKEND_URL=http://127.0.0.1:8000
-\
+```
 ### 4. Run the Application
 
 Start the **FastAPI backend** (Terminal 1):
-\\ash
+
+```bash
 python -m uvicorn main:app --reload --port 8000
-\*API interactive documentation will be available at \http://127.0.0.1:8000/docs\.*
+```
+
+*API interactive documentation will be available at `http://127.0.0.1:8000/docs`.*
 
 Start the **Streamlit frontend** (Terminal 2):
-\\ash
+
+```bash
 python -m streamlit run app.py
-\*The web interface will launch at \http://localhost:8501\.*
+```
+
+*The web interface will launch at `http://localhost:8501`.*
 
 ---
 
